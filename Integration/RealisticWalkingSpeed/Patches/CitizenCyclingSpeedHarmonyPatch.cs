@@ -42,7 +42,10 @@ namespace RealisticWalkingSpeed.Patches
 
                 var simulationStepTranspilerMethodInfo = GetType()
                     .GetMethod(nameof(SimulationStepTranspiler), BindingFlags.Static | BindingFlags.NonPublic);
-                _harmony.Patch(simulationStepMethodInfo, null, null, new HarmonyMethod(simulationStepTranspilerMethodInfo));
+                // Run at low priority so other transpilers on HumanAI.SimulationStep (e.g. OOC)
+                // see the original game IL first, preventing false "pattern not found" warnings.
+                var harmonyMethod = new HarmonyMethod(simulationStepTranspilerMethodInfo) { priority = Priority.Low };
+                _harmony.Patch(simulationStepMethodInfo, null, null, harmonyMethod);
                 Utils.Log("CitizenCyclingSpeedHarmonyPatch: Successfully patched HumanAI.SimulationStep");
             }
             catch (System.Exception ex)

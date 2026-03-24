@@ -126,8 +126,15 @@ namespace FlightTracker
             // Regenerate vehicle list.
             _tempList.Clear();
             ushort vehicleID = buildingBuffer[_buildingID].m_ownVehicles;
+            int ownVehicleLoopGuard = 0;
+            int maxOwnVehicles = (int)Singleton<VehicleManager>.instance.m_vehicles.m_size;
             while (vehicleID != 0)
             {
+                if (++ownVehicleLoopGuard > maxOwnVehicles)
+                {
+                    Logging.Error("Invalid own-vehicle list detected for building ", _buildingID);
+                    break;
+                }
                 // Local reference.
                 ref Vehicle thisVehicle = ref vehicleBuffer[vehicleID];
 

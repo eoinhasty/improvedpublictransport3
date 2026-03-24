@@ -44,6 +44,7 @@ namespace ExpressBusServices
                 Vehicle localVehicle = instance.m_vehicles.m_buffer[iteratorVehicleID];
                 totalCapacity += GetCarryingCapacityOfThisVehicle(vehicleID, ref localVehicle);
                 iteratorVehicleID = localVehicle.m_trailingVehicle;
+                iterateCount++;
                 if (iterateCount >= instance.m_vehicles.m_size)
                 {
                     // invalid
@@ -92,8 +93,14 @@ namespace ExpressBusServices
 
             VehicleManager instance = Singleton<VehicleManager>.instance;
             ushort currentVehicleID = data.m_trailingVehicle;
+            int loopGuard = 0;
             while (currentVehicleID != 0)
             {
+                if (++loopGuard > 64)
+                {
+                    CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid trailing vehicle list detected!");
+                    break;
+                }
                 ref Vehicle currentData = ref instance.m_vehicles.m_buffer[currentVehicleID];
                 if (!ReversePatch_VehicleAI_CanLeave.BaseVehicleAI_CanLeave(null, currentVehicleID, ref currentData))
                 {

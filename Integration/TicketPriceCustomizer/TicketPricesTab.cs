@@ -59,6 +59,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                 // Load custom icon atlases
                 LoadCustomIconAtlases();
 
+                Utils.Log("TicketPricesTab: Finding EconomyTabstrip and EconomyContainer");
                 var tabStrip = economyPanel.Find<UITabstrip>("EconomyTabstrip");
                 var tabContainer = economyPanel.Find<UITabContainer>("EconomyContainer");
                 if (tabStrip == null || tabContainer == null)
@@ -67,8 +68,10 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                     return;
                 }
 
+                Utils.Log("TicketPricesTab: Adding tab button");
                 // Create the tab button styled like the existing ones
                 var tabButton = tabStrip.AddTab("TicketPrices");
+                Utils.Log("TicketPricesTab: Tab button added, setting text");
                 tabButton.text = Localization.Get("ECONOMY_TAB_TICKET_PRICES");
                 // Style it to match the other economy tab buttons
                 StyleTabButton(tabButton, tabStrip);
@@ -82,6 +85,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                     return;
                 }
 
+                Utils.Log($"TicketPricesTab: Page found, size={page.width}x{page.height}; building content");
                 page.autoLayout = false;
                 page.size = tabContainer.size;
                 page.isVisible = false; // Hidden until this tab is selected; UITabstrip shows it on click
@@ -224,6 +228,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
 
         private static void BuildTicketPricesContent(UIPanel page)
         {
+            Utils.Log($"TicketPricesTab: BuildTicketPricesContent entered, page={page.width}x{page.height}");
             page.autoLayout = false;
             // Ensure page has a valid size (if not set, defer initialization)
             if (page.width <= 0 || page.height <= 0)
@@ -285,7 +290,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             var leftColumn = mainContainer.AddUIComponent<UIScrollablePanel>();
             leftColumn.autoLayout = true;
             leftColumn.autoLayoutDirection = LayoutDirection.Vertical;
-            leftColumn.autoLayoutPadding = new RectOffset((int)COL_PAD, (int)COL_PAD, 0, 0);
+            leftColumn.autoLayoutPadding = new RectOffset(0, 0, 0, 2);
             leftColumn.clipChildren = true;
             leftColumn.relativePosition = Vector3.zero;
             leftColumn.size = new Vector2(columnWidth, columnHeight);
@@ -296,16 +301,18 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             var rightColumn = mainContainer.AddUIComponent<UIScrollablePanel>();
             rightColumn.autoLayout = true;
             rightColumn.autoLayoutDirection = LayoutDirection.Vertical;
-            rightColumn.autoLayoutPadding = new RectOffset((int)COL_PAD, (int)COL_PAD, 0, 0);
+            rightColumn.autoLayoutPadding = new RectOffset(0, 0, 0, 2);
             rightColumn.clipChildren = true;
             rightColumn.relativePosition = new Vector3(columnWidth + COL_GAP, 0);
             rightColumn.size = new Vector2(columnWidth, columnHeight);
             rightColumn.scrollWheelDirection = UIOrientation.Vertical;
             rightColumn.builtinKeyNavigation = true;
 
+            Utils.Log($"TicketPricesTab: Creating {landTransport.Count} land rows, {airWaterTransport.Count} air/water rows");
             int landIndex = 0;
             foreach (var transportType in landTransport)
             {
+                Utils.Log($"TicketPricesTab: Creating land row for {transportType.Name}");
                 var row = CreateSliderRow(leftColumn, transportType, hasAfterDark, landIndex);
                 if (row != null)
                 {
@@ -317,6 +324,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             int airIndex = 0;
             foreach (var transportType in airWaterTransport)
             {
+                Utils.Log($"TicketPricesTab: Creating air/water row for {transportType.Name}");
                 var row = CreateSliderRow(rightColumn, transportType, hasAfterDark, airIndex);
                 if (row != null)
                 {
@@ -324,8 +332,16 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                     airIndex++;
                 }
             }
+            Utils.Log("TicketPricesTab: All rows created");
 
             s_ticketPricesContainer = leftColumn; // Store reference to main container
+
+            // Trigger an immediate passenger-count refresh the first time the tab is opened
+            // (and again every subsequent open), rather than waiting the full RefreshInterval.
+            page.eventVisibilityChanged += (c, visible) =>
+            {
+                if (visible) s_refreshAccumulator = RefreshInterval;
+            };
         }
 
         private static bool IsTransportLoaded(TransportTypeInfo info)
@@ -381,15 +397,12 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
 
         private static TicketPriceSliderRow CreateSliderRow(UIScrollablePanel container, TransportTypeInfo transportType, bool hasAfterDark, int index)
         {
-            try
-            {
-                return CreateSliderRowFromTemplate(container, transportType, hasAfterDark, index);
-            }
-            catch (Exception ex)
-            {
-                Utils.LogError($"TicketPricesTab: BudgetItem template row failed for {transportType.Name}: {ex.Message}. Falling back to custom row.");
-                return CreateSliderRowFallback(container, transportType, hasAfterDark, index);
-            }
+            // Try the game's BudgetItem prefab first — gives the correct dual-handle visual for free.
+            // Falls back to a custom row if the template is unavailable.
+            var row = CreateSliderRowFromTemplate(container, transportType, hasAfterDark, index);
+            if (row != null) return row;
+            Utils.Log($"TicketPricesTab: Template unavailable for {transportType.Name}, using fallback");
+            return CreateSliderRowFallback(container, transportType, hasAfterDark, index);
         }
 
         // Uses the game's own BudgetItem prefab — visually identical to the Budget panel.
@@ -398,7 +411,9 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
         private static TicketPriceSliderRow CreateSliderRowFromTemplate(
             UIScrollablePanel container, TransportTypeInfo transportType, bool hasAfterDark, int index)
         {
+            Utils.Log($"TicketPricesTab: GetAsGameObject BudgetItem for {transportType.Name}");
             var templateGO   = UITemplateManager.GetAsGameObject("BudgetItem");
+            Utils.Log($"TicketPricesTab: AttachUIComponent for {transportType.Name} (templateGO null={templateGO == null})");
             var rowComponent = container.AttachUIComponent(templateGO);
             
             // Make rows narrower than container to prevent cutoff (leave 30px margin)
@@ -409,12 +424,17 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             var biType       = typeof(BudgetItem);
             var flags        = BindingFlags.Instance | BindingFlags.NonPublic;
             var daySlider    = (UISlider)biType.GetField("m_DaySlider",           flags).GetValue(budgetItem);
-            var nightSlider  = (UISlider)biType.GetField("m_NightSlidermalan",    flags).GetValue(budgetItem);
+            var nightSlider  = (UISlider)biType.GetField("m_NightSlidermalan",     flags).GetValue(budgetItem);
             var dayLabel     = (UILabel) biType.GetField("m_DayPercentageLabel",  flags).GetValue(budgetItem);
             var nightLabel   = (UILabel) biType.GetField("m_NightPercentageLabel",flags).GetValue(budgetItem);
             var totalLabel   = (UILabel) biType.GetField("m_TotalLabel",          flags).GetValue(budgetItem);
 
-            // Disable + destroy BudgetItem so EconomyPanel can never call Init() on it
+            if (daySlider == null || dayLabel == null || totalLabel == null)
+            {
+                Utils.LogError($"TicketPricesTab: BudgetItem reflection failed for {transportType.Name} — daySlider={daySlider}, dayLabel={dayLabel}, totalLabel={totalLabel}");
+                UnityEngine.Object.Destroy(rowComponent.gameObject);
+                return null;
+            }
             ((Behaviour)budgetItem).enabled = false;
             UnityEngine.Object.Destroy(budgetItem);
 
@@ -477,8 +497,15 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                 nightSlider.tooltip          = GetTransportTooltip(transportType.Name);
             }
 
-            // Income total
-            UpdateTotalLabel(transportType.Name, totalLabel);
+            // Income total — deferred: populated by OnUpdate once the game is running,
+            // to avoid scanning the vehicle buffer (huge with MoreVehicles) during loading.
+            totalLabel.text = "-";
+            
+            // Set tooltip on the parent panel since UILabel doesn't support tooltips natively.
+            if (totalLabel.parent != null)
+            {
+                totalLabel.parent.tooltip = Localization.Get("ECONOMY_TAB_TICKET_PRICES_TOOLTIP_PASSENGER_COUNT");
+            }
 
             var row = new TicketPriceSliderRow
             {
@@ -494,7 +521,6 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             daySlider.eventValueChanged += (comp, value) =>
             {
                 dayLabel.text = Mathf.RoundToInt(value).ToString();
-                UpdateTotalLabel(transportType.Name, totalLabel);
                 ApplyMultiplier(row);
             };
 
@@ -503,7 +529,6 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                 nightSlider.eventValueChanged += (comp, value) =>
                 {
                     if (nightLabel != null) nightLabel.text = Mathf.RoundToInt(value).ToString();
-                    UpdateTotalLabel(transportType.Name, totalLabel);
                     ApplyMultiplier(row);
                 };
             }
@@ -600,13 +625,23 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
 
             var totalLabel = rowPanel.AddUIComponent<UILabel>();
             totalLabel.name              = "TotalLabel";
+            totalLabel.autoSize          = false;
+            totalLabel.wordWrap          = false;
             totalLabel.textAlignment     = UIHorizontalAlignment.Center;
-            totalLabel.textScale         = 0.7f;
+            totalLabel.textScale         = 0.85f;
             totalLabel.textColor         = new Color32((byte)206, (byte)248, (byte)0, (byte)255);
             totalLabel.size              = new Vector2(TOTAL_W, rowH - 4f);
             totalLabel.relativePosition  = new Vector3(totalX, 2f);
-            totalLabel.verticalAlignment = UIVerticalAlignment.Middle;
-            UpdateTotalLabel(transportType.Name, totalLabel);
+            // UILabel.verticalAlignment is unreliable in CS1 — use padding to vertically centre.
+            // Approximate single-line height for scale 0.85 ≈ 12 px.
+            totalLabel.padding           = new RectOffset(0, 0, Mathf.Max(0, Mathf.RoundToInt((rowH - 4f - 12f) / 2f)), 0);
+            totalLabel.text = "-"; // populated by OnUpdate once the game is running
+            
+            // Set tooltip on the parent panel since UILabel doesn't support tooltips natively.
+            if (totalLabel.parent != null)
+            {
+                totalLabel.parent.tooltip = Localization.Get("ECONOMY_TAB_TICKET_PRICES_TOOLTIP_PASSENGER_COUNT");
+            }
 
             // ── Wire up ─────────────────────────────────────────────────
             var row = new TicketPriceSliderRow
@@ -623,7 +658,6 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             daySlider.eventValueChanged += (comp, value) =>
             {
                 dayLabel.text = Mathf.RoundToInt(value) + "%";
-                UpdateTotalLabel(transportType.Name, totalLabel);
                 ApplyMultiplier(row);
             };
 
@@ -632,7 +666,6 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                 nightSlider.eventValueChanged += (comp, value) =>
                 {
                     if (nightLabel != null) nightLabel.text = Mathf.RoundToInt(value) + "%";
-                    UpdateTotalLabel(transportType.Name, totalLabel);
                     ApplyMultiplier(row);
                 };
             }
@@ -664,11 +697,14 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             track.relativePosition = new Vector2(0f, 4f);
             track.size = new Vector2(width, 9f);
 
-            // Thumb — UISlicedSprite with Ingame atlas so the orange BudgetItem thumb renders
+            // Thumb — plain white rectangle. "SliderBudget" is the Budget panel's combined
+            // day+night dual-indicator sprite and renders with two visual handles, which
+            // makes every slider look like a dual-handled Budget slider — wrong here.
             var thumb = slider.AddUIComponent<UISlicedSprite>();
-            thumb.atlas = UITextures.InGameAtlas;
-            thumb.spriteName = "SliderBudget";
-            thumb.size = new Vector2(16f, 16f);
+            thumb.atlas = UIView.GetAView().defaultAtlas;
+            thumb.spriteName = "GenericPanelWhite";
+            thumb.color = new Color32((byte)220, (byte)220, (byte)200, (byte)255);
+            thumb.size = new Vector2(10f, 18f);
 
             slider.thumbObject = thumb;
 
@@ -758,14 +794,19 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                     if (line.Info == null) continue;
                     if (!LineMatchesTransport(line.Info, transportName)) continue;
 
-                    for (ushort vehicleId = line.m_vehicles; vehicleId != 0; vehicleId = vehicleManager.m_vehicles.m_buffer[vehicleId].m_nextLineVehicle)
+                    int vehiclesSeen = 0;
+                    for (ushort vehicleId = line.m_vehicles;
+                         vehicleId != 0 && vehiclesSeen < vehicleManager.m_vehicles.m_size;
+                         vehicleId = vehicleManager.m_vehicles.m_buffer[vehicleId].m_nextLineVehicle, vehiclesSeen++)
                     {
                         if (vehicleId >= vehicleManager.m_vehicles.m_size) break;
                         var vehicle = vehicleManager.m_vehicles.m_buffer[vehicleId];
                         int vehiclePassengers = vehicle.m_transferSize;
                         var trailingId = vehicle.m_trailingVehicle;
-                        while (trailingId != 0 && trailingId < vehicleManager.m_vehicles.m_size)
+                        int trailingsSeen = 0;
+                        while (trailingId != 0 && trailingId < vehicleManager.m_vehicles.m_size && trailingsSeen < 64)
                         {
+                            trailingsSeen++;
                             var trailingVehicle = vehicleManager.m_vehicles.m_buffer[trailingId];
                             vehiclePassengers += trailingVehicle.m_transferSize;
                             trailingId = trailingVehicle.m_trailingVehicle;
@@ -785,11 +826,13 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
 
         // Generic vehicle scan by AI type — counts m_transferSize of all active vehicles
         // whose AI is exactly TAI. This correctly handles types that set m_transportLine=0.
+        // NOTE: loop variable must be int, not ushort — MoreVehicles sets m_size to 65536,
+        //       which causes ushort to wrap from 65535 → 0, creating an infinite loop.
         private static int CountVehiclesByAI<TAI>() where TAI : VehicleAI
         {
             int count = 0;
             var vm = Singleton<VehicleManager>.instance;
-            for (ushort i = 1; i < vm.m_vehicles.m_size; i++)
+            for (int i = 1; i < vm.m_vehicles.m_size; i++)
             {
                 var v = vm.m_vehicles.m_buffer[i];
                 if ((v.m_flags & Vehicle.Flags.Created) == 0) continue;
@@ -805,7 +848,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
         {
             int count = 0;
             var vm = Singleton<VehicleManager>.instance;
-            for (ushort i = 1; i < vm.m_vehicles.m_size; i++)
+            for (int i = 1; i < vm.m_vehicles.m_size; i++)
             {
                 var v = vm.m_vehicles.m_buffer[i];
                 if ((v.m_flags & Vehicle.Flags.Created) == 0) continue;

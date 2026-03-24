@@ -152,16 +152,16 @@ Enables realistic pedestrian and cycling speeds in your city, controllable from 
 
 **Available Modes:**
 - **Standard**: Standard game walking and cycling speeds (default Cities: Skylines behavior)
-- **Realistic**: Applies realistic slowed down walking speeds based on citizen age and gender, with enhanced cycling speeds.
+- **Realistic**: Applies realistic slowed down walking speeds based on citizen age and gender, and reduces cycling speeds uniformly.
 
 **What Changes with Realistic Mode:**
 - **Walking Speed**: Citizens walk at realistic speeds (0.54–0.82 m/s) that vary by age and gender, replacing uniform vanilla speeds
-- **Cycling Speed** (After Dark DLC only): Increases cycling speeds, making bikes a more competitive transport option
+- **Cycling Speed** (After Dark DLC only): All cyclists are slowed uniformly; cycling travel times become more significant regardless of cyclist profile
 - **Animation Sync**: Walking and cycling animations adjust to match the new movement speeds for realism
 
 **Gameplay Impact:**
-- Realistic mode makes pedestrian connections between transit stops more time-consuming, emphasizing good transit coverage
-- Enhanced cycling speeds encourage bike usage (if you own After Dark DLC)
+- Realistic mode makes pedestrian and cycling connections between transit stops more time-consuming, emphasizing good transit coverage
+- Cycling becomes a realistic alternative to transit for shorter distances, but longer trips favor public transport
 - Citizens move more realistically overall, affecting passenger boarding times and transfer experiences
 
 #### Stops and Stations

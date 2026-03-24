@@ -261,6 +261,7 @@ TICKET_PRICE_TROLLEYBUS 트롤리버스 요금:
 TICKET_PRICE_BLIMP 비행선 요금: 
 TICKET_PRICE_HELICOPTER 헬리콥터 요금: 
 ECONOMY_TAB_TICKET_PRICES 요금
+ECONOMY_TAB_TICKET_PRICES_TOOLTIP_PASSENGER_COUNT 이 교통 유형의 현재 승객의 총 수입니다.
 
 WHATSNEW_3_0_0_1 Race Day 업데이트; More Vehicles Renewed와 호환됩니다.
 WHATSNEW_3_0_0_2 다음 모드가 IPT3에 통합되었습니다:\n • Advanced Stop Selection Revisited\n • Auto Line Color Redux\n • Better Bus Stop Position\n • Better Train Boarding\n • Elevated Stops Enabler Revisited  \n • Express Bus Services\n • Flight Tracker\n • Intercity Bus Control\n • Mileage Taxi Services\n • Realistic Walking Speed\n • Stops and Stations\n • Ticket Price Customizer

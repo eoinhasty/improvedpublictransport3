@@ -125,8 +125,14 @@ namespace ExpressBusServices.DataTypes
 
             // next, iterate till the end
             VehicleManager managerInstance = Singleton<VehicleManager>.instance;
+            int loopGuard = 0;
             while (true)
             {
+                if (++loopGuard > 64)
+                {
+                    CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid trailing vehicle list detected!");
+                    break;
+                }
                 if (GetSafely(currentID).HasPaxDelta)
                 {
                     return true;

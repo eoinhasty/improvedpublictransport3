@@ -27,9 +27,15 @@ namespace ExpressBusServices.DataTypes
             // we will iterate the list until it reads 0, which indicates "no more vehicles in the line"
             ushort iteratingVehicleID = theLine.m_vehicles;
             List<VehicleLineProgress> progressList = new List<VehicleLineProgress>();
-            // StringBuilder builder = new StringBuilder("Vehicle IDs:\n");
+            int loopGuard = 0;
+            int maxIterations = (int)instance.m_vehicles.m_size;
             while (iteratingVehicleID != 0)
             {
+                if (++loopGuard > maxIterations)
+                {
+                    CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid vehicle list detected!");
+                    break;
+                }
                 VehicleInfo info = Singleton<VehicleManager>.instance.m_vehicles.m_buffer[iteratingVehicleID].Info;
                 info.m_vehicleAI.GetProgressStatus(iteratingVehicleID, ref Singleton<VehicleManager>.instance.m_vehicles.m_buffer[iteratingVehicleID], out float current, out float max);
                 // the bool return is simply to indicate whether the bus is stopping at a stop.
@@ -40,7 +46,6 @@ namespace ExpressBusServices.DataTypes
                     // a valid bus; invalid bus (eg is despawning) will get max = 0
                     VehicleLineProgress progress = new VehicleLineProgress(iteratingVehicleID, current / max);
                     progressList.Add(progress);
-                    // builder.AppendLine(vehicleIterator.ToString());
                 }
                 iteratingVehicleID = instance.m_vehicles.m_buffer[iteratingVehicleID].m_nextLineVehicle;
             }

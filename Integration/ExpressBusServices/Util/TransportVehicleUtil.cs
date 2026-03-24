@@ -47,8 +47,14 @@ namespace ExpressBusServices.Util
             // iterate to the first of the list
             VehicleManager manager = Singleton<VehicleManager>.instance;
             ref Vehicle currentData = ref manager.m_vehicles.m_buffer[currentID];
+            int loopGuard = 0;
             while (currentData.m_leadingVehicle != 0)
             {
+                if (++loopGuard > 64)
+                {
+                    CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid vehicle set list detected!");
+                    break;
+                }
                 currentID = currentData.m_leadingVehicle;
                 currentData = ref manager.m_vehicles.m_buffer[currentID];
             }
