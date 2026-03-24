@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using ColossalFramework;
 using ExpressBusServices.Util;
 using JetBrains.Annotations;
+using IPTUtils = ImprovedPublicTransport.Util.Utils;
 
 namespace ExpressBusServices.DataTypes
 {
@@ -130,7 +131,7 @@ namespace ExpressBusServices.DataTypes
             {
                 if (++loopGuard > 64)
                 {
-                    CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid trailing vehicle list detected!");
+                    IPTUtils.LogError("ExpressBusServices: Invalid trailing vehicle list detected!");
                     break;
                 }
                 if (GetSafely(currentID).HasPaxDelta)

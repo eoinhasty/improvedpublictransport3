@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ColossalFramework;
 using UnityEngine;
+using IPTUtils = ImprovedPublicTransport.Util.Utils;
 
 namespace BetterBoarding.DataTypes
 {
@@ -94,7 +95,7 @@ namespace BetterBoarding.DataTypes
                         currentCitizenID = nextGridInstance;
                         if (++iterationCount > 65536)
                         {
-                            CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid list detected!\n" + Environment.StackTrace);
+                            IPTUtils.LogError("BetterBoarding: Invalid citizen list detected!\n" + Environment.StackTrace);
                             break;
                         }
                     }

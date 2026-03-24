@@ -1,6 +1,7 @@
 ﻿using ColossalFramework;
 using System;
 using UnityEngine;
+using IPTUtils = ImprovedPublicTransport.Util.Utils;
 
 namespace ExpressBusServices
 {
@@ -67,7 +68,7 @@ namespace ExpressBusServices
                         citizenIterator = nextGridInstance;
                         if (++loopCounter > 65536)
                         {
-                            CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid list detected!\n" + Environment.StackTrace);
+                            IPTUtils.LogError("ExpressBusServices: Invalid citizen list detected!\n" + Environment.StackTrace);
                             break;
                         }
                     }
@@ -127,7 +128,7 @@ namespace ExpressBusServices
                 num2 = instance.m_units.m_buffer[(int)((UIntPtr)num2)].m_nextUnit;
                 if (++num3 > numCitizenUnits)
                 {
-                    CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid list detected!\n" + Environment.StackTrace);
+                    IPTUtils.LogError("ExpressBusServices: Invalid citizen unit list detected!\n" + Environment.StackTrace);
                     break;
                 }
             }

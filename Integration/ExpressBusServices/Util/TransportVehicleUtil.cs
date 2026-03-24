@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using IPTUtils = ImprovedPublicTransport.Util.Utils;
 
 namespace ExpressBusServices.Util
 {
@@ -52,7 +53,7 @@ namespace ExpressBusServices.Util
             {
                 if (++loopGuard > 64)
                 {
-                    CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid vehicle set list detected!");
+                    IPTUtils.LogError("ExpressBusServices: Invalid vehicle set list detected!");
                     break;
                 }
                 currentID = currentData.m_leadingVehicle;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ColossalFramework;
+using IPTUtils = ImprovedPublicTransport.Util.Utils;
 
 namespace BetterBoarding.DataTypes
 {
@@ -39,7 +40,7 @@ namespace BetterBoarding.DataTypes
             {
                 if (++iterationCount > 16384)
                 {
-                    CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid list detected!\n" + Environment.StackTrace);
+                    IPTUtils.LogError("BetterBoarding: Invalid vehicle list detected!\n" + Environment.StackTrace);
                     break;
                 }
                 var currentVehicleInstance = vehicleManager.m_vehicles.m_buffer[currentVehicleID];

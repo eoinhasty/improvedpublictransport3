@@ -1,5 +1,6 @@
 ﻿using ColossalFramework;
 using System.Collections.Generic;
+using IPTUtils = ImprovedPublicTransport.Util.Utils;
 
 namespace ExpressBusServices.DataTypes
 {
@@ -33,7 +34,7 @@ namespace ExpressBusServices.DataTypes
             {
                 if (++loopGuard > maxIterations)
                 {
-                    CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid vehicle list detected!");
+                    IPTUtils.LogError("ExpressBusServices: Invalid vehicle list detected!");
                     break;
                 }
                 VehicleInfo info = Singleton<VehicleManager>.instance.m_vehicles.m_buffer[iteratingVehicleID].Info;

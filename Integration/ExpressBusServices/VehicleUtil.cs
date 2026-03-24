@@ -1,5 +1,6 @@
 ﻿using ColossalFramework;
 using ExpressBusServices.PerformanceBoost;
+using IPTUtils = ImprovedPublicTransport.Util.Utils;
 
 namespace ExpressBusServices
 {
@@ -98,7 +99,7 @@ namespace ExpressBusServices
             {
                 if (++loopGuard > 64)
                 {
-                    CODebugBase<LogChannel>.Error(LogChannel.Core, "Invalid trailing vehicle list detected!");
+                    IPTUtils.LogError("ExpressBusServices: Invalid trailing vehicle list detected!");
                     break;
                 }
                 ref Vehicle currentData = ref instance.m_vehicles.m_buffer[currentVehicleID];
