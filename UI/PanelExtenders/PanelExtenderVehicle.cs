@@ -81,6 +81,18 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
     private void UpdateBindings()
     {
       var lineId = WorldInfoCurrentLineIDQuery.Query(out var vehicleID);
+      var currentInstanceId = WorldInfoPanel.GetCurrentInstanceID();
+      if (currentInstanceId.Type == InstanceType.Vehicle && currentInstanceId.Vehicle != 0)
+      {
+        ushort selectedVehicle = currentInstanceId.Vehicle;
+        var manager = Singleton<VehicleManager>.instance;
+        var firstVehicle = manager.m_vehicles.m_buffer[selectedVehicle].GetFirstVehicle(selectedVehicle);
+        if (firstVehicle != 0)
+        {
+          vehicleID = firstVehicle;
+        }
+      }
+
       if ((int) lineId == 0)
       {
         this._passengerPanel.Hide();

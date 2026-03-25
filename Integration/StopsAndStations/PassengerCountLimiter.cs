@@ -7,6 +7,7 @@ namespace StopsAndStations
     using System;
     using ICities;
     using ImprovedPublicTransport.OptionsFramework;
+    using ImprovedPublicTransport.Util;
     using Settings = ImprovedPublicTransport.Settings.Settings;
 
     /// <summary>
@@ -32,6 +33,18 @@ namespace StopsAndStations
         /// </summary>
         public PassengerCountLimiter()
         {
+            if (NetManager.instance == null || CitizenManager.instance == null || 
+                PathManager.instance == null || TransportManager.instance == null)
+            {
+                Utils.LogError("PassengerCountLimiter: One or more game managers not initialized yet");
+                segments = null;
+                instances = null;
+                pathUnits = null;
+                nodes = null;
+                transportLines = null;
+                return;
+            }
+
             segments = NetManager.instance.m_segments.m_buffer;
             instances = CitizenManager.instance.m_instances.m_buffer;
             pathUnits = PathManager.instance.m_pathUnits.m_buffer;
@@ -60,7 +73,7 @@ namespace StopsAndStations
         /// </summary>
         public override void OnBeforeSimulationTick()
         {
-            if (Settings == null)
+            if (Settings == null || segments == null || instances == null || pathUnits == null)
             {
                 return;
             }
@@ -85,7 +98,7 @@ namespace StopsAndStations
         /// </summary>
         public override void OnBeforeSimulationFrame()
         {
-            if (Settings == null)
+            if (Settings == null || segments == null || instances == null || pathUnits == null || nodes == null || transportLines == null)
             {
                 return;
             }
@@ -116,6 +129,11 @@ namespace StopsAndStations
 
         private int GetMaximumAllowedPassengers(ushort nodeId)
         {
+            if (nodes == null || transportLines == null)
+            {
+                return int.MaxValue;
+            }
+
             ushort transportLineId = nodes[nodeId].m_transportLine;
             if (transportLineId == 0)
             {

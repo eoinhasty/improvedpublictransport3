@@ -183,7 +183,15 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                     // set its texture to our PNG, add the sprite with full-UV region, rebuild the index.
                     var atlas = ScriptableObject.CreateInstance<UITextureAtlas>();
                     atlas.name = info.SpriteName;
-                    atlas.material = UnityEngine.Object.Instantiate(UIView.GetAView().defaultAtlas.material);
+
+                    var uiView = UIView.GetAView();
+                    if (uiView == null || uiView.defaultAtlas == null)
+                    {
+                        Utils.LogError($"TicketPricesTab: UIView or defaultAtlas not available for icon {info.SpriteName}");
+                        continue;
+                    }
+
+                    atlas.material = UnityEngine.Object.Instantiate(uiView.defaultAtlas.material);
                     atlas.material.mainTexture = texture;
                     atlas.AddSprite(new UITextureAtlas.SpriteInfo
                     {
@@ -418,17 +426,40 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
 
             // Reflect into BudgetItem to grab the serialized UI references
             var budgetItem   = ((Component)rowComponent).GetComponent<BudgetItem>();
+            if (budgetItem == null)
+            {
+                Utils.LogError($"TicketPricesTab: BudgetItem component not found on row for {transportType.Name}");
+                UnityEngine.Object.Destroy(rowComponent.gameObject);
+                return null;
+            }
+
             var biType       = typeof(BudgetItem);
             var flags        = BindingFlags.Instance | BindingFlags.NonPublic;
-            var daySlider    = (UISlider)biType.GetField("m_DaySlider",           flags).GetValue(budgetItem);
-            var nightSlider  = (UISlider)biType.GetField("m_NightSlidermalan",     flags).GetValue(budgetItem);
-            var dayLabel     = (UILabel) biType.GetField("m_DayPercentageLabel",  flags).GetValue(budgetItem);
-            var nightLabel   = (UILabel) biType.GetField("m_NightPercentageLabel",flags).GetValue(budgetItem);
-            var totalLabel   = (UILabel) biType.GetField("m_TotalLabel",          flags).GetValue(budgetItem);
+            
+            UISlider daySlider = null;
+            UISlider nightSlider = null;
+            UILabel dayLabel = null;
+            UILabel nightLabel = null;
+            UILabel totalLabel = null;
+            
+            try
+            {
+                daySlider    = (UISlider)biType.GetField("m_DaySlider",           flags).GetValue(budgetItem);
+                nightSlider  = (UISlider)biType.GetField("m_NightSlidermalan",     flags).GetValue(budgetItem);
+                dayLabel     = (UILabel) biType.GetField("m_DayPercentageLabel",  flags).GetValue(budgetItem);
+                nightLabel   = (UILabel) biType.GetField("m_NightPercentageLabel",flags).GetValue(budgetItem);
+                totalLabel   = (UILabel) biType.GetField("m_TotalLabel",          flags).GetValue(budgetItem);
+            }
+            catch (Exception ex)
+            {
+                Utils.LogError($"TicketPricesTab: BudgetItem reflection failed for {transportType.Name}: {ex.Message}");
+                UnityEngine.Object.Destroy(rowComponent.gameObject);
+                return null;
+            }
 
             if (daySlider == null || dayLabel == null || totalLabel == null)
             {
-                Utils.LogError($"TicketPricesTab: BudgetItem reflection failed for {transportType.Name} — daySlider={daySlider}, dayLabel={dayLabel}, totalLabel={totalLabel}");
+                Utils.LogError($"TicketPricesTab: BudgetItem reflection returned nulls for {transportType.Name} — daySlider={daySlider}, dayLabel={dayLabel}, totalLabel={totalLabel}");
                 UnityEngine.Object.Destroy(rowComponent.gameObject);
                 return null;
             }

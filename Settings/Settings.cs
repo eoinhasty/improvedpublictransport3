@@ -295,37 +295,41 @@ namespace ImprovedPublicTransport.Settings
         // --- AutoLineColor integration settings
         public enum AutoLineColorStrategy
         {
+            [Description("AUTOLINECOLOR_STRATEGY_DISABLED")]
+            Disabled = 0,
             [Description("AUTOLINECOLOR_STRATEGY_RANDOM_HUE")]
-            RandomHue = 0,
+            RandomHue = 1,
             [Description("AUTOLINECOLOR_STRATEGY_RANDOM_COLOR")]
-            RandomColor = 1,
+            RandomColor = 2,
             [Description("AUTOLINECOLOR_STRATEGY_CATEGORISED")]
-            CategorisedColor = 2,
+            CategorisedColor = 3,
             [Description("AUTOLINECOLOR_STRATEGY_NAMED")]
-            NamedColors = 3,
+            NamedColors = 4,
         }
 
         public enum AutoLineColorNamingStrategy
         {
+            [Description("AUTOLINECOLOR_NAMING_DISABLED")]
+            Disabled = 0,
             [Description("AUTOLINECOLOR_NAMING_NONE")]
-            None = 0,
+            None = 1,
             [Description("AUTOLINECOLOR_NAMING_DISTRICTS")]
-            Districts = 1,
+            Districts = 2,
             [Description("AUTOLINECOLOR_NAMING_LONDON")]
-            London = 2,
+            London = 3,
             [Description("AUTOLINECOLOR_NAMING_ROADS")]
-            Roads = 3,
+            Roads = 4,
             [Description("AUTOLINECOLOR_NAMING_COLORS")]
-            NamedColors = 4,
+            NamedColors = 5,
         }
 
         [Description("AUTOLINECOLOR_COLOR_STRATEGY_TOOLTIP")]
         [DropDown("AUTOLINECOLOR_COLOR_STRATEGY", nameof(AutoLineColorStrategy), SETTINGS_AUTO_LINE)]
-        public int AutoLineColorColorStrategy { get; set; } = (int)AutoLineColorStrategy.RandomColor;
+        public int AutoLineColorColorStrategy { get; set; } = (int)AutoLineColorStrategy.Disabled;
 
         [Description("AUTOLINECOLOR_NAMING_STRATEGY_TOOLTIP")]
         [DropDown("AUTOLINECOLOR_NAMING_STRATEGY", nameof(AutoLineColorNamingStrategy), SETTINGS_AUTO_LINE)]
-        public int AutoLineColorNamingStrategyMode { get; set; } = (int)AutoLineColorNamingStrategy.Districts;
+        public int AutoLineColorNamingStrategyMode { get; set; } = (int)AutoLineColorNamingStrategy.Disabled;
 
         [Description("AUTOLINECOLOR_MIN_COLOR_DIFF_TOOLTIP")]
         [Slider("AUTOLINECOLOR_MIN_COLOR_DIFF", 1f, 50f, 1f, SETTINGS_AUTO_LINE)]

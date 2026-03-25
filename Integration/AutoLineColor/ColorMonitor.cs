@@ -68,6 +68,8 @@ namespace AutoLineColor
             Logger.Message($"Naming Strategy: {namingStrategy}");
             switch (namingStrategy)
             {
+                case ImprovedPublicTransport.Settings.Settings.AutoLineColorNamingStrategy.Disabled:
+                    return new NoNamingStrategy();
                 case ImprovedPublicTransport.Settings.Settings.AutoLineColorNamingStrategy.None:
                     return new NoNamingStrategy();
                 case ImprovedPublicTransport.Settings.Settings.AutoLineColorNamingStrategy.Districts:
@@ -90,6 +92,8 @@ namespace AutoLineColor
             Logger.Message($"Color Strategy: {colorStrategy}");
             switch (colorStrategy)
             {
+                case ImprovedPublicTransport.Settings.Settings.AutoLineColorStrategy.Disabled:
+                    return null;
                 case ImprovedPublicTransport.Settings.Settings.AutoLineColorStrategy.RandomHue:
                     return new RandomHueStrategy();
                 case ImprovedPublicTransport.Settings.Settings.AutoLineColorStrategy.RandomColor:
@@ -100,7 +104,7 @@ namespace AutoLineColor
                     return new NamedColorStrategy();
                 default:
                     Logger.Error("unknown color strategy");
-                    return new RandomHueStrategy();
+                    return null;
             }
         }
 
@@ -234,9 +238,13 @@ namespace AutoLineColor
             if (!transportLine.IsActive())
                 return;
 
+            // If both color and naming are disabled, skip processing
+            if (_colorStrategy == null && _namingStrategy is NoNamingStrategy)
+                return;
+
             // only worry about newly created lines, unless forcing the update
-            var updateColor = forceUpdate || !transportLine.HasCustomColor(); // && transportLine.m_color.IsDefaultColor();
-            var updateName = forceUpdate || !transportLine.HasCustomName();
+            var updateColor = (forceUpdate || !transportLine.HasCustomColor()) && _colorStrategy != null;
+            var updateName = (forceUpdate || !transportLine.HasCustomName()) && !(_namingStrategy is NoNamingStrategy);
 
             if (!updateColor && !updateName)
                 return;
@@ -260,7 +268,7 @@ namespace AutoLineColor
                 return;
             }
 
-            if (updateColor)
+            if (updateColor && _colorStrategy != null)
             {
                 newColor = _colorStrategy.GetColor(transportLine, _usedColors);
 
@@ -269,9 +277,12 @@ namespace AutoLineColor
                 theSimulationManager.AddAction(theTransportManager.SetLineColor(lineId, newColor));
             }
 
+            if (!updateName || _namingStrategy is NoNamingStrategy)
+                return;
+
             newName = _namingStrategy.GetName(transportLine, lineId);
 
-            if (!updateName || string.IsNullOrEmpty(newName))
+            if (string.IsNullOrEmpty(newName))
                 return;
 
             Logger.Message($"Changing line {lineId} name from '{currentName}' to '{newName}'");

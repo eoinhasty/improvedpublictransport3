@@ -64,7 +64,7 @@ namespace ImprovedPublicTransport.OptionsFramework
                         }
                         SaveOptions();
                     }
-                    catch (FileNotFoundException)
+                    catch (IOException)
                     {
                         ReadOptionsFile(GetFileName());
                     }
@@ -74,7 +74,7 @@ namespace ImprovedPublicTransport.OptionsFramework
                     ReadOptionsFile(GetFileName());
                 }
             }
-            catch (FileNotFoundException)
+            catch (IOException)
             {
                 SaveOptions();// No options file yet
             }
@@ -102,8 +102,14 @@ namespace ImprovedPublicTransport.OptionsFramework
         {
             try
             {
+                var fileName = GetFileName();
+                var directory = Path.GetDirectoryName(fileName);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
                 var xmlSerializer = new XmlSerializer(typeof(T));
-                using (var streamWriter = new StreamWriter(GetFileName()))
+                using (var streamWriter = new StreamWriter(fileName))
                 {
                     xmlSerializer.Serialize(streamWriter, _instance);
                 }

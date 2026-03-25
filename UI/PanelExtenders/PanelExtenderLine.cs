@@ -941,7 +941,16 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
                 return;
             }
 
-            _depotDropDown.AddItems(BuildingExtension.GetDepots(info), IDToName);
+            ushort[] depots = BuildingExtension.GetDepots(info);
+            if (depots == null || depots.Length == 0)
+            {
+                return;
+            }
+
+            // Sort depots alphabetically by their display name
+            System.Array.Sort(depots, (a, b) => IDToName(a).CompareTo(IDToName(b)));
+            
+            _depotDropDown.AddItems(depots, IDToName);
         }
 
         private int GetDepotDistrictNamesHash(TransportInfo info)

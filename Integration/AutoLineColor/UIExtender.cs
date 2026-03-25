@@ -1,6 +1,7 @@
 ﻿using ColossalFramework.UI;
 using ICities;
 using ImprovedPublicTransport.Query;
+using ImprovedPublicTransport.Util;
 using JetBrains.Annotations;
 using UnityEngine;
 
@@ -47,10 +48,40 @@ namespace AutoLineColor
         {
             //Console.Instance.Message("Attaching UI");
 
-            var ptwip = GameObject.Find("UIView").transform.GetComponentInChildren<PublicTransportWorldInfoPanel>();
+            var uiViewGO = GameObject.Find("UIView");
+            if (uiViewGO == null)
+            {
+                Utils.LogError("UIExtender: UIView GameObject not found");
+                return;
+            }
+
+            var ptwip = uiViewGO.transform.GetComponentInChildren<PublicTransportWorldInfoPanel>();
+            if (ptwip == null)
+            {
+                Utils.LogError("UIExtender: PublicTransportWorldInfoPanel not found");
+                return;
+            }
+
             var ptwipUiPanel = ptwip.gameObject.GetComponent<UIPanel>();
+            if (ptwipUiPanel == null)
+            {
+                Utils.LogError("UIExtender: UIPanel component not found on PublicTransportWorldInfoPanel");
+                return;
+            }
+
             var linesOverview = (UIButton)ptwipUiPanel.Find("LinesOverview");
+            if (linesOverview == null)
+            {
+                Utils.LogError("UIExtender: LinesOverview button not found");
+                return;
+            }
+
             var buttonPanel = (UIPanel)linesOverview.parent;
+            if (buttonPanel == null)
+            {
+                Utils.LogError("UIExtender: Button panel not found");
+                return;
+            }
 
             // Robust cleanup: search all child buttons for any existing RefreshNameAndColor button
             foreach (UIButton btn in buttonPanel.GetComponentsInChildren<UIButton>())

@@ -901,6 +901,7 @@ namespace ImprovedPublicTransport.UI
                 var colorDropdown = UI.AlgernonCommons.UIDropDowns.AddLabelledDropDown(colorRow, 0f, 2f, Localization.Get("AUTOLINECOLOR_COLOR_STRATEGY"), 220f, 25f);
                 colorDropdown.items = new string[]
                 {
+                    Localization.Get("AUTOLINECOLOR_STRATEGY_DISABLED"),
                     Localization.Get("AUTOLINECOLOR_STRATEGY_RANDOM_HUE"),
                     Localization.Get("AUTOLINECOLOR_STRATEGY_RANDOM_COLOR"),
                     Localization.Get("AUTOLINECOLOR_STRATEGY_CATEGORISED"),
@@ -919,6 +920,7 @@ namespace ImprovedPublicTransport.UI
                 var namingDropdown = UI.AlgernonCommons.UIDropDowns.AddLabelledDropDown(namingRow, 0f, 2f, Localization.Get("AUTOLINECOLOR_NAMING_STRATEGY"), 220f, 25f);
                 namingDropdown.items = new string[]
                 {
+                    Localization.Get("AUTOLINECOLOR_NAMING_DISABLED"),
                     Localization.Get("AUTOLINECOLOR_NAMING_NONE"),
                     Localization.Get("AUTOLINECOLOR_NAMING_DISTRICTS"),
                     Localization.Get("AUTOLINECOLOR_NAMING_LONDON"),

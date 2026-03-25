@@ -20,6 +20,7 @@ namespace ImprovedPublicTransport.Data
     private DefaultPrefabData Defaults;
     private bool _changeFlag;
     private int _maintenanceCost;
+    private bool _maintenanceCostManuallySet;
 
     public int PrefabDataIndex => Info.m_prefabDataIndex;
 
@@ -35,12 +36,18 @@ namespace ImprovedPublicTransport.Data
       {
         var totalCapacity = GetCapacity(Info.m_class.m_service, Info.m_class.m_subService,
           Info.m_class.m_level, Info.m_vehicleAI);
-        if (_trailerData != null)
+        // Query Info.m_trailers directly to support dynamic carriage changes (e.g., CarriageNumberSelector)
+        if (Info.m_trailers != null)
         {
-          for (int i = 0; i < _trailerData.Length; i++)
-            totalCapacity += _trailerData[i].Capacity;
+          for (int i = 0; i < Info.m_trailers.Length; i++)
+          {
+            if (Info.m_trailers[i].m_info != null)
+              totalCapacity += GetCapacity(Info.m_trailers[i].m_info.m_class.m_service,
+                Info.m_trailers[i].m_info.m_class.m_subService,
+                Info.m_trailers[i].m_info.m_class.m_level,
+                Info.m_trailers[i].m_info.m_vehicleAI);
+          }
         }
-
 
         return totalCapacity;
       }
@@ -75,11 +82,12 @@ namespace ImprovedPublicTransport.Data
       get
       {
         var num = 1;
-        if (_trailerData != null)
+        // Query Info.m_trailers directly to support dynamic carriage changes (e.g., CarriageNumberSelector)
+        if (Info.m_trailers != null)
         {
           var mySubService = Info.GetSubService();
-          for (int i = 0; i < _trailerData.Length; i++)
-            if (_trailerData[i].Info.GetSubService() == mySubService) num++;
+          for (int i = 0; i < Info.m_trailers.Length; i++)
+            if (Info.m_trailers[i].m_info != null && Info.m_trailers[i].m_info.GetSubService() == mySubService) num++;
         }
         return num;
       }
@@ -115,10 +123,11 @@ namespace ImprovedPublicTransport.Data
           case ItemClass.SubService.PublicTransportMonorail:
           case ItemClass.SubService.PublicTransportCableCar:
           case ItemClass.SubService.PublicTransportTrolleybus:
-            if (_maintenanceCost == 0)
+            // If manually set by user, use cached value; otherwise recalculate to support dynamic carriage changes
+            if (!_maintenanceCostManuallySet || _maintenanceCost == 0)
             {
               float num = TotalCapacity / (float) CarCount / (float) GetCapacity(service, subService, level, Info.m_vehicleAI);
-              MaintenanceCost = Mathf.RoundToInt(GetMaintenanceCost(service, subService, level, Info.m_vehicleAI) * 16 * num);
+              _maintenanceCost = Mathf.RoundToInt(GetMaintenanceCost(service, subService, level, Info.m_vehicleAI) * 16 * num);
             }
             return _maintenanceCost;
           default:
@@ -133,6 +142,7 @@ namespace ImprovedPublicTransport.Data
         }
 
         _maintenanceCost = value;
+        _maintenanceCostManuallySet = true;
         _changeFlag = true;
       }
     }
@@ -308,9 +318,11 @@ namespace ImprovedPublicTransport.Data
     public void SetDefaults()
     {
       Capacity = Defaults.Capacity;
-      MaintenanceCost = Defaults.MaintenanceCost;
       MaxSpeed = Defaults.MaxSpeed;
       EngineOnBothEnds = Defaults.EngineOnBothEnds;
+      // Reset maintenance cost to allow recalculation based on current carriage count
+      _maintenanceCost = 0;
+      _maintenanceCostManuallySet = false;
       if (_trailerData != null)
       {
         foreach (var trailer in _trailerData)
