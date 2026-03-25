@@ -92,7 +92,9 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
       {
         this._publicTransportVehicleWorldInfoPanel.component.height = 377f;
         this._editType.isVisible = !OptionsWrapper<Settings.Settings>.Options.HideVehicleEditor;
-          ItemClass itemClass = Singleton<TransportManager>.instance.m_lines.m_buffer[(int) lineId].Info.m_class;
+          var lineInfo = Singleton<TransportManager>.instance.m_lines.m_buffer[(int) lineId].Info;
+          if (lineInfo == null) return;
+          ItemClass itemClass = lineInfo.m_class;
           ItemClass.SubService subService = itemClass.m_subService;
           ItemClass.Service service = itemClass.m_service;
           ItemClass.Level level = itemClass.m_level;
@@ -140,16 +142,19 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
         this._distanceTraveled.parent.Show();
         this._distanceProgress.parent.Show();
         VehicleManager vm = Singleton<VehicleManager>.instance;
-        if ((vm.m_vehicles.m_buffer[(int) vehicleID].m_flags & Vehicle.Flags.Stopped) != ~(Vehicle.Flags.Created | Vehicle.Flags.Deleted | Vehicle.Flags.Spawned | Vehicle.Flags.Inverted | Vehicle.Flags.TransferToTarget | Vehicle.Flags.TransferToSource | Vehicle.Flags.Emergency1 | Vehicle.Flags.Emergency2 | Vehicle.Flags.WaitingPath | Vehicle.Flags.Stopped | Vehicle.Flags.Leaving | Vehicle.Flags.Arriving | Vehicle.Flags.Reversed | Vehicle.Flags.TakingOff | Vehicle.Flags.Flying | Vehicle.Flags.Landing | Vehicle.Flags.WaitingSpace | Vehicle.Flags.WaitingCargo | Vehicle.Flags.GoingBack | Vehicle.Flags.WaitingTarget | Vehicle.Flags.Importing | Vehicle.Flags.Exporting | Vehicle.Flags.Parking | Vehicle.Flags.CustomName | Vehicle.Flags.OnGravel | Vehicle.Flags.WaitingLoading | Vehicle.Flags.Congestion | Vehicle.Flags.DummyTraffic | Vehicle.Flags.Underground | Vehicle.Flags.Transition | Vehicle.Flags.InsideBuilding | Vehicle.Flags.LeftHandDrive))
+        if (vehicleID == 0) return;
+        ref var vehicle = ref vm.m_vehicles.m_buffer[(int)vehicleID];
+        if (vehicle.Info == null) return;
+        if ((vehicle.m_flags & Vehicle.Flags.Stopped) != ~(Vehicle.Flags.Created | Vehicle.Flags.Deleted | Vehicle.Flags.Spawned | Vehicle.Flags.Inverted | Vehicle.Flags.TransferToTarget | Vehicle.Flags.TransferToSource | Vehicle.Flags.Emergency1 | Vehicle.Flags.Emergency2 | Vehicle.Flags.WaitingPath | Vehicle.Flags.Stopped | Vehicle.Flags.Leaving | Vehicle.Flags.Arriving | Vehicle.Flags.Reversed | Vehicle.Flags.TakingOff | Vehicle.Flags.Flying | Vehicle.Flags.Landing | Vehicle.Flags.WaitingSpace | Vehicle.Flags.WaitingCargo | Vehicle.Flags.GoingBack | Vehicle.Flags.WaitingTarget | Vehicle.Flags.Importing | Vehicle.Flags.Exporting | Vehicle.Flags.Parking | Vehicle.Flags.CustomName | Vehicle.Flags.OnGravel | Vehicle.Flags.WaitingLoading | Vehicle.Flags.Congestion | Vehicle.Flags.DummyTraffic | Vehicle.Flags.Underground | Vehicle.Flags.Transition | Vehicle.Flags.InsideBuilding | Vehicle.Flags.LeftHandDrive))
         {
           if (CachedVehicleData.m_cachedVehicleData[(int) vehicleID].IsUnbunchingInProgress)
             this._status.text = Localization.Get("VEHICLE_PANEL_STATUS_UNBUNCHING");
           this._distance.text = this._status.text;
-          var boardingTime = vm.m_vehicles.m_buffer[(int)vehicleID].Info?.m_vehicleType == VehicleInfo.VehicleType.Plane
+          var boardingTime = vehicle.Info.m_vehicleType == VehicleInfo.VehicleType.Plane
             ? CanLeaveStopPatch.AirplaneBoardingTime
             : CanLeaveStopPatch.BoardingTime;
           
-          var timeSinceBoardingFinished = vm.m_vehicles.m_buffer[vehicleID].m_waitCounter - boardingTime;
+          var timeSinceBoardingFinished = vehicle.m_waitCounter - boardingTime;
           float progress;
           if (timeSinceBoardingFinished <= 0)
           {
@@ -183,7 +188,7 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
           this._status.text = text;
           if (flag)
           {
-            ushort targetBuilding = vm.m_vehicles.m_buffer[(int) vehicleID].m_targetBuilding;
+            ushort targetBuilding = vehicle.m_targetBuilding;
             InstanceID id = new InstanceID();
             id.NetNode = targetBuilding;
             string name = Singleton<InstanceManager>.instance.GetName(id);
@@ -199,7 +204,8 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
         this._passengersCurrentWeek.text = CachedVehicleData.m_cachedVehicleData[(int) vehicleID].PassengersThisWeek.ToString();
         this._passengersLastWeek.text = CachedVehicleData.m_cachedVehicleData[(int) vehicleID].PassengersLastWeek.ToString();
         this._passengersAverage.text = CachedVehicleData.m_cachedVehicleData[(int) vehicleID].PassengersAverage.ToString();
-        PrefabData prefabData = Array.Find(VehiclePrefabs.instance.GetPrefabs(service, subService, level), item => item.PrefabDataIndex == vm.m_vehicles.m_buffer[(int) vehicleID].Info.m_prefabDataIndex);
+        PrefabData prefabData = VehiclePrefabs.instance.FindByIndex(vehicle.Info.m_prefabDataIndex);
+        if (prefabData == null) return;
         int num1 = CachedVehicleData.m_cachedVehicleData[(int) vehicleID].IncomeThisWeek - prefabData.MaintenanceCost;
         UILabel earningsCurrentWeek = this._earningsCurrentWeek;
         float num2 = (float) num1 * 0.01f;

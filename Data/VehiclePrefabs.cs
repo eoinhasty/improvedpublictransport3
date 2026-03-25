@@ -30,6 +30,7 @@ namespace ImprovedPublicTransport.Data
         private PrefabData[] _helicopterPrefabData;
 
         private Dictionary<string, PrefabData> _allPrefabData;
+        private Dictionary<int, PrefabData> _prefabDataByIndex;
 
         public static void Init()
         {
@@ -39,7 +40,15 @@ namespace ImprovedPublicTransport.Data
         [CanBeNull]
         public PrefabData FindByName([NotNull] string prefabName)
         {
-            return _allPrefabData[prefabName];
+            _allPrefabData.TryGetValue(prefabName, out var result);
+            return result;
+        }
+
+        [CanBeNull]
+        public PrefabData FindByIndex(int prefabDataIndex)
+        {
+            _prefabDataByIndex.TryGetValue(prefabDataIndex, out var result);
+            return result;
         }
 
         public PrefabData[] GetPrefabs(ItemClass.Service service,
@@ -75,12 +84,17 @@ namespace ImprovedPublicTransport.Data
         private PrefabData[] GetPrefabsNoLogging(ItemClass.Service service,
             ItemClass.SubService subService)
         {
-            var prefabs = instance.GetPrefabsNoLogging(service, subService, ItemClass.Level.Level1)
-                .Concat(instance.GetPrefabsNoLogging(service, subService, ItemClass.Level.Level2))
-                .Concat(instance.GetPrefabsNoLogging(service, subService, ItemClass.Level.Level3))
-                .Concat(instance.GetPrefabsNoLogging(service, subService, ItemClass.Level.Level4))
-                .ToArray();
-            return prefabs;
+            var l1 = instance.GetPrefabsNoLogging(service, subService, ItemClass.Level.Level1);
+            var l2 = instance.GetPrefabsNoLogging(service, subService, ItemClass.Level.Level2);
+            var l3 = instance.GetPrefabsNoLogging(service, subService, ItemClass.Level.Level3);
+            var l4 = instance.GetPrefabsNoLogging(service, subService, ItemClass.Level.Level4);
+            if (l2.Length == 0 && l3.Length == 0 && l4.Length == 0) return l1;
+            var result = new PrefabData[l1.Length + l2.Length + l3.Length + l4.Length];
+            l1.CopyTo(result, 0);
+            l2.CopyTo(result, l1.Length);
+            l3.CopyTo(result, l1.Length + l2.Length);
+            l4.CopyTo(result, l1.Length + l2.Length + l3.Length);
+            return result;
         }
 
         private PrefabData[] GetPrefabsNoLogging(ItemClass.Service service,
@@ -154,6 +168,7 @@ namespace ImprovedPublicTransport.Data
         private void RegisterPrefabs()
         {
             _allPrefabData = new Dictionary<string, PrefabData>();
+            _prefabDataByIndex = new Dictionary<int, PrefabData>();
             var busList = new List<PrefabData>();
             var biofuelBusList = new List<PrefabData>();
             var metroList = new List<PrefabData>();
@@ -365,6 +380,7 @@ namespace ImprovedPublicTransport.Data
         {
             var prefabData = new PrefabData(prefab);
             _allPrefabData.Add(prefab.name, prefabData);
+            _prefabDataByIndex[prefab.m_prefabDataIndex] = prefabData;
             return prefabData;
         }
     }

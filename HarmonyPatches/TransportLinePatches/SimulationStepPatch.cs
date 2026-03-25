@@ -101,15 +101,12 @@ namespace ImprovedPublicTransport.HarmonyPatches.TransportLinePatches
                 stop1 = TransportLine.GetNextStop(stop1);
             } while (stops1 != stop1 && stop1 != 0);
 
-            var itemClass = TransportManager.instance.m_lines.m_buffer[__state].Info.m_class;
-            var prefabs =
-                VehiclePrefabs.instance.GetPrefabs(itemClass.m_service, itemClass.m_subService, itemClass.m_level);
             var amount = 0;
             TransportLineUtil.CountLineActiveVehicles(__state, out _, (num3) =>
             {
-                var prefabData = Array.Find(prefabs,
-                    item => item.PrefabDataIndex ==
-                            VehicleManager.instance.m_vehicles.m_buffer[num3].Info.m_prefabDataIndex);
+                var vInfo = VehicleManager.instance.m_vehicles.m_buffer[num3].Info;
+                if (vInfo == null) return;
+                var prefabData = VehiclePrefabs.instance.FindByIndex(vInfo.m_prefabDataIndex);
                 if (prefabData == null) return;
                 amount += prefabData.MaintenanceCost;
                 CachedVehicleData.m_cachedVehicleData[num3].StartNewWeek(prefabData.MaintenanceCost);

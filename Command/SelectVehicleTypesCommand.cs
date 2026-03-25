@@ -17,7 +17,7 @@ namespace ImprovedPublicTransport.Command
             {
                 return;
             }
-            var selectedItems = new HashSet<string>(selectedVehicleInfos.Select(v => v.Info.name).Distinct().ToArray());
+            var selectedItems = new HashSet<string>(selectedVehicleInfos.Where(v => v.Info != null).Select(v => v.Info.name).Distinct().ToArray());
             CachedTransportLineData.SetPrefabs(lineId, selectedItems.Count == 0 ? null : selectedItems);
             Singleton<SimulationManager>.instance.AddAction(() => ReplaceVehicles(lineId));
         }

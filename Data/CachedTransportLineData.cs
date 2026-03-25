@@ -288,11 +288,16 @@ namespace ImprovedPublicTransport.Data
         {
             if (_lineData[lineID].Prefabs != null)
             {
-                var array = _lineData[lineID].Prefabs.ToArray();
-                if (array.Length != 0)
+                var linePrefabs = _lineData[lineID].Prefabs;
+                int count = linePrefabs.Count;
+                if (count != 0)
                 {
-                    var index = Singleton<SimulationManager>.instance.m_randomizer.Int32((uint) array.Length);
-                    return array[index];
+                    var index = (int)Singleton<SimulationManager>.instance.m_randomizer.Int32((uint)count);
+                    int i = 0;
+                    foreach (var name in linePrefabs)
+                    {
+                        if (i++ == index) return name;
+                    }
                 }
             }
             var itemClass = Singleton<TransportManager>.instance.m_lines.m_buffer[lineID]

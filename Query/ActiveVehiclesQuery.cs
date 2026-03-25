@@ -42,6 +42,7 @@ namespace ImprovedPublicTransport.Query
                     continue;
                 }
                 var info = Singleton<VehicleManager>.instance.m_vehicles.m_buffer[vehicle].Info;
+                if (info == null) continue;
                 foreach (var data in prefabs)
                 {
                     if (info.name != data.Name)

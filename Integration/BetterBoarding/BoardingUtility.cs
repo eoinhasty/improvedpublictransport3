@@ -70,10 +70,15 @@ namespace BetterBoarding
             {
                 // find nth closest vehicle
                 var paxPosition = paxInfo.Position;
-                // since the actual order of the free compartments list does not matter, we can use it to conveniently "sort by distance to passenger"
-                var sortedVehicles = freeVehiclesList.OrderBy((item) => Vector3.Distance(paxPosition, item.Position));
+                // Sort by distance using Array.Sort to avoid per-passenger LINQ IEnumerable allocation.
+                var vehicleCount = freeVehiclesList.Count;
+                var sortBuffer = new VehicleOccupancyInfo[vehicleCount];
+                for (int si = 0; si < vehicleCount; si++) sortBuffer[si] = freeVehiclesList[si];
+                System.Array.Sort(sortBuffer, (a, b) =>
+                    Vector3.SqrMagnitude(paxPosition - a.Position)
+                    .CompareTo(Vector3.SqrMagnitude(paxPosition - b.Position)));
                 var rank = 0;
-                foreach (var vehicle in sortedVehicles)
+                foreach (var vehicle in sortBuffer)
                 {
                     paxRankedChoice[rank, currentPaxIndex] = new PassengerChoice(paxInfo.CitizenID, vehicle.VehicleID);
                     // debugString.AppendLine($"Pax {paxInfo.CitizenID} rank {rank} picks vehicle {vehicle.VehicleID}");

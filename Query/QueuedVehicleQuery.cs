@@ -11,18 +11,18 @@ namespace ImprovedPublicTransport.Query
         {
             var result = new List<PrefabData>();
             var enqueuedVehicles = CachedTransportLineData.GetEnqueuedVehicles(lineID);
+            if (enqueuedVehicles.Length == 0) return result;
+
             var prefabs = VehiclePrefabs.instance.GetPrefabs(classTriplet.Service, classTriplet.SubService, classTriplet.Level);
+            // Build a name-lookup dictionary to turn O(n*m) into O(n+m)
+            var prefabByName = new Dictionary<string, PrefabData>(prefabs.Length);
+            foreach (var data in prefabs)
+                prefabByName[data.Name] = data;
+
             foreach (var str in enqueuedVehicles)
             {
-                foreach (var data in prefabs)
-                {
-                    if (data.Name != str)
-                    {
-                        continue;
-                    }
-                    result.Add(data);
-                    break;
-                }
+                if (prefabByName.TryGetValue(str, out var found))
+                    result.Add(found);
             }
 
             return result;

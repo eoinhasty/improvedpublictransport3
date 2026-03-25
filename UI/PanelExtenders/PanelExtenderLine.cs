@@ -30,6 +30,7 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
         private Dictionary<ItemClassTriplet, bool> _updateDepots;
         private int _cachedSimCount;
         private int _cachedQueuedCount;
+        private int _lastDepotDistrictNamesHash;
         private PublicTransportWorldInfoPanel _publicTransportWorldInfoPanel;
         private UIComponent _mainSubPanel;
         private UIPanel _iptContainer;
@@ -256,7 +257,8 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
             {
                 int lineVehicleCount = TransportLineUtil.CountLineActiveVehicles(lineId, out int _);
                 int targetVehicleCount = CachedTransportLineData.GetTargetVehicleCount(lineId);
-                int num1 = Singleton<TransportManager>.instance.m_lines.m_buffer[lineId].CountStops(lineId);
+                var tm = Singleton<TransportManager>.instance;
+                int num1 = tm.m_lines.m_buffer[lineId].CountStops(lineId);
                 _vehicleAmount.text = string.Format(Localization.Get("TRANSPORT_LINE_VEHICLECOUNT"),
                     lineVehicleCount + " / " + targetVehicleCount);
                 _stopCountLabel.text = string.Format(Localization.Get("LINE_PANEL_STOPS"), num1);
@@ -279,7 +281,7 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
                             string.Format(
                                 Localization.Get("UNBUNCHING_ENABLED") + " - " +
                                 Localization.Get("UNBUNCHING_TARGET_GAP"),
-                                Singleton<TransportManager>.instance.m_lines.m_buffer[lineId].m_averageInterval);
+                                tm.m_lines.m_buffer[lineId].m_averageInterval);
                     }
                     else
                         _unbunching.label.text = Localization.Get("UNBUNCHING_ENABLED");
@@ -287,7 +289,7 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
 
                 bool depotNotValid = false;
                 ushort depotID = CachedTransportLineData.GetDepot(lineId);
-                TransportInfo info = TransportManager.instance.m_lines.m_buffer[lineId].Info;
+                TransportInfo info = tm.m_lines.m_buffer[lineId].Info;
                 if (!DepotUtil.IsValidDepot(depotID, info))
                 {
                     depotNotValid = true;
@@ -300,9 +302,9 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
                 if (depotCanAddVehicle)
                 {
                     var currentlyDisabled = SimulationManager.instance.m_isNightTime
-                        ? (Singleton<TransportManager>.instance.m_lines.m_buffer[lineId].m_flags &
+                        ? (tm.m_lines.m_buffer[lineId].m_flags &
                            TransportLine.Flags.DisabledNight) != TransportLine.Flags.None
-                        : (Singleton<TransportManager>.instance.m_lines.m_buffer[lineId].m_flags &
+                        : (tm.m_lines.m_buffer[lineId].m_flags &
                            TransportLine.Flags.DisabledDay) != TransportLine.Flags.None;
 
                     if (currentlyDisabled || lineVehicleCount >= targetVehicleCount)
@@ -328,7 +330,13 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
                 ItemClass.Level level = info.GetClassLevel();
                 ItemClassTriplet triplet = new ItemClassTriplet(service, subService, level);
 
-                if (subService != _cachedSubService || level != _cachedLevel || depotNotValid || _updateDepots[triplet])
+                // Check if depot district names changed
+                int currentDepotDistrictHash = GetDepotDistrictNamesHash(info);
+                bool depotDistrictNamesChanged = currentDepotDistrictHash != _lastDepotDistrictNamesHash;
+                if (depotDistrictNamesChanged)
+                    _lastDepotDistrictNamesHash = currentDepotDistrictHash;
+
+                if (subService != _cachedSubService || level != _cachedLevel || depotNotValid || _updateDepots[triplet] || depotDistrictNamesChanged)
                 {
                     PopulateDepotDropDown(info);
                     _updateDepots[triplet] = false;
@@ -553,7 +561,7 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
             uiPanel.height = 27f;
             uiPanel.autoLayoutDirection = LayoutDirection.Horizontal;
             uiPanel.autoLayoutStart = LayoutStart.TopLeft;
-            uiPanel.autoLayoutPadding = new RectOffset(0, 6, 0, 0);
+            uiPanel.autoLayoutPadding = new RectOffset(0, 2, 0, 0);
             uiPanel.autoLayout = true;
             UILabel uiLabel = uiPanel.AddUIComponent<UILabel>();
             string str1 = Localization.Get("LINE_PANEL_DEPOT");
@@ -568,7 +576,7 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
             uiLabel.autoSize = num1 != 0;
             double num2 = 27.0;
             uiLabel.height = (float)num2;
-            double num3 = 97.0;
+            double num3 = 60.0;
             uiLabel.width = (float)num3;
             int num4 = 1;
             uiLabel.verticalAlignment = (UIVerticalAlignment)num4;
@@ -576,7 +584,7 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
             _depotDropDown.name = "DepotDropDown";
             _depotDropDown.Font = _vehicleAmount.font;
             _depotDropDown.height = 27f;
-            _depotDropDown.width = 167f;
+            _depotDropDown.width = 241f;
             _depotDropDown.DropDownPanelAlignParent = _publicTransportWorldInfoPanel.component;
             _depotDropDown.eventSelectedItemChanged += OnSelectedDepotChanged;
             UIButton uiButton = uiPanel.AddUIComponent<UIButton>();
@@ -936,14 +944,102 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
             _depotDropDown.AddItems(BuildingExtension.GetDepots(info), IDToName);
         }
 
+        private int GetDepotDistrictNamesHash(TransportInfo info)
+        {
+            if (info == null)
+                return 0;
+
+            ushort[] depots = BuildingExtension.GetDepots(info);
+            if (depots == null || depots.Length == 0)
+                return 0;
+
+            int hash = 17;
+            DistrictManager dm = Singleton<DistrictManager>.instance;
+            BuildingManager bm = Singleton<BuildingManager>.instance;
+
+            foreach (ushort depotId in depots)
+            {
+                Building depot = bm.m_buildings.m_buffer[depotId];
+                byte district = dm.GetDistrict(depot.m_position);
+                if (district != 0)
+                {
+                    string districtName = dm.GetDistrictName(district);
+                    if (!string.IsNullOrEmpty(districtName))
+                        unchecked
+                        {
+                            hash = hash * 31 + districtName.GetHashCode();
+                        }
+                }
+            }
+
+            return hash;
+        }
+
         private string IDToName(ushort buildingID)
         {
-            BuildingManager instance = Singleton<BuildingManager>.instance;
-            if ((instance.m_buildings.m_buffer[buildingID].m_flags & Building.Flags.Untouchable) != Building.Flags.None)
-                buildingID = instance.FindBuilding(instance.m_buildings.m_buffer[buildingID].m_position, 100f,
+            if (buildingID == 0)
+                return "Invalid Depot";
+
+            BuildingManager bm = Singleton<BuildingManager>.instance;
+            Building building = bm.m_buildings.m_buffer[buildingID];
+            
+            // Handle Untouchable flag
+            if ((building.m_flags & Building.Flags.Untouchable) != Building.Flags.None)
+            {
+                buildingID = bm.FindBuilding(building.m_position, 100f,
                     ItemClass.Service.None, ItemClass.SubService.None, Building.Flags.Active,
                     Building.Flags.Untouchable);
-            return instance.GetBuildingName(buildingID, InstanceID.Empty) ?? "";
+                if (buildingID == 0)
+                    return "Invalid Depot";
+                building = bm.m_buildings.m_buffer[buildingID];
+            }
+            
+            // Check if building has a custom name (user-assigned)
+            if ((building.m_flags & Building.Flags.CustomName) != Building.Flags.None)
+            {
+                // User-assigned name - return it directly
+                InstanceID id = default(InstanceID);
+                id.Building = buildingID;
+                string customName = Singleton<InstanceManager>.instance.GetName(id);
+                if (!string.IsNullOrEmpty(customName))
+                {
+                    return customName;
+                }
+            }
+            
+            // No custom name: use the game's standard building naming logic
+            string displayName = bm.GetBuildingName(buildingID, InstanceID.Empty) ?? "";
+
+            // Append district if available (fallback for standard names)
+            byte district = Singleton<DistrictManager>.instance.GetDistrict(building.m_position);
+            if (district != 0)
+            {
+                string districtName = Singleton<DistrictManager>.instance.GetDistrictName(district);
+                if (!string.IsNullOrEmpty(districtName))
+                {
+                    if (string.IsNullOrEmpty(displayName))
+                    {
+                        string baseName = building.Info?.name;
+                        if (string.IsNullOrEmpty(baseName))
+                            baseName = "Depot " + buildingID;
+                        displayName = baseName + " (" + districtName + ")";
+                    }
+                    else
+                    {
+                        displayName = displayName + " (" + districtName + ")";
+                    }
+                }
+            }
+
+            // Fall back only if game name is empty
+            if (string.IsNullOrEmpty(displayName))
+            {
+                displayName = building.Info?.name;
+                if (string.IsNullOrEmpty(displayName))
+                    displayName = "Depot " + buildingID;
+            }
+
+            return displayName;
         }
 
 

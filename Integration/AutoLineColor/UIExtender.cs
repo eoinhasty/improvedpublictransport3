@@ -52,10 +52,14 @@ namespace AutoLineColor
             var linesOverview = (UIButton)ptwipUiPanel.Find("LinesOverview");
             var buttonPanel = (UIPanel)linesOverview.parent;
 
-            _refreshBtn = buttonPanel.Find<UIButton>("RefreshNameAndColor");
-
-            if (_refreshBtn != null)
-                buttonPanel.RemoveUIComponent(_refreshBtn);
+            // Robust cleanup: search all child buttons for any existing RefreshNameAndColor button
+            foreach (UIButton btn in buttonPanel.GetComponentsInChildren<UIButton>())
+            {
+                if (btn.name == "RefreshNameAndColor")
+                {
+                    buttonPanel.RemoveUIComponent(btn);
+                }
+            }
 
             _refreshBtn = buttonPanel.AddUIComponent<UIButton>();
             _refreshBtn.name = "RefreshNameAndColor";

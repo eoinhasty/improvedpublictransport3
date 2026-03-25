@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using ColossalFramework;
@@ -38,7 +37,8 @@ namespace ImprovedPublicTransport.Data
           Info.m_class.m_level, Info.m_vehicleAI);
         if (_trailerData != null)
         {
-          totalCapacity += _trailerData.Select((t, index) => _trailerData[index].Capacity).Sum();
+          for (int i = 0; i < _trailerData.Length; i++)
+            totalCapacity += _trailerData[i].Capacity;
         }
 
 
@@ -77,7 +77,9 @@ namespace ImprovedPublicTransport.Data
         var num = 1;
         if (_trailerData != null)
         {
-          num += _trailerData.Count(t => t.Info.GetSubService() == Info.GetSubService());
+          var mySubService = Info.GetSubService();
+          for (int i = 0; i < _trailerData.Length; i++)
+            if (_trailerData[i].Info.GetSubService() == mySubService) num++;
         }
         return num;
       }

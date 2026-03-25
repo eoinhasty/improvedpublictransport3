@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using ColossalFramework;
 using ColossalFramework.UI;
 using ImprovedPublicTransport.Data;
@@ -22,6 +21,8 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
     
     private bool _initialized;
     private ushort _cachedBuildingID;
+    private ushort _cachedOriginalBuilding;
+    private ushort[] _cachedStopArray = new ushort[0];
     private int _cachedStopCount;
     private int _cachedVehicleCount;
     private CityServiceWorldInfoPanel _cityServiceWorldInfoPanel;
@@ -62,35 +63,43 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
           case ItemClass.SubService.PublicTransportTrolleybus:
             this._vehicleListBox.Hide(); //TODO(): display depot's vehicles? Also, maybe it makes sense to display list of lines served by depot?
             this._stopsListBox.Show();
-            ushort[] numArray = PanelExtenderCityService.GetStationStops(building);
-            BuildingInfo.SubInfo[] subBuildings = instance1.m_buildings.m_buffer[(int) building].Info.m_subBuildings;
-            if (subBuildings != null && subBuildings.Length != 0)
+            ushort originalBuilding = building;
+            if (this._cachedOriginalBuilding != originalBuilding)
             {
-              Vector3 position = instance1.m_buildings.m_buffer[(int) building].m_position;
-              building = instance1.FindBuilding(position, 100f, ItemClass.Service.PublicTransport, ItemClass.SubService.None, Building.Flags.Untouchable, Building.Flags.None);
-              if ((int) building != 0)
+              ushort[] numArray = PanelExtenderCityService.GetStationStops(building);
+              BuildingInfo.SubInfo[] subBuildings = instance1.m_buildings.m_buffer[(int) building].Info.m_subBuildings;
+              if (subBuildings != null && subBuildings.Length != 0)
               {
-                ushort[] stationStops = PanelExtenderCityService.GetStationStops(building);
-                if (stationStops.Length != 0)
-                  numArray = ((IEnumerable<ushort>) numArray).Concat<ushort>((IEnumerable<ushort>) stationStops).ToArray<ushort>();
+                Vector3 position = instance1.m_buildings.m_buffer[(int) building].m_position;
+                ushort subBuilding = instance1.FindBuilding(position, 100f, ItemClass.Service.PublicTransport, ItemClass.SubService.None, Building.Flags.Untouchable, Building.Flags.None);
+                if ((int) subBuilding != 0)
+                {
+                  ushort[] stationStops = PanelExtenderCityService.GetStationStops(subBuilding);
+                  if (stationStops.Length != 0)
+                  {
+                    ushort[] combined = new ushort[numArray.Length + stationStops.Length];
+                    numArray.CopyTo(combined, 0);
+                    stationStops.CopyTo(combined, numArray.Length);
+                    numArray = combined;
+                  }
+                }
               }
-            }
-            int length = numArray.Length;
-            if (length > 0)
-            {
-              this._titleLabel.text = Localization.Get("CITY_SERVICE_PANEL_TITLE_STATION_STOPS");
-              this._listBoxPanel.relativePosition = new Vector3(this._listBoxPanel.parent.width + 1f, VerticalOffset);
-              this._listBoxPanel.Show();
-              if ((int) this._cachedBuildingID != (int) building || this._cachedStopCount != length)
+              this._cachedStopArray = numArray;
+              this._cachedOriginalBuilding = originalBuilding;
+              int length = numArray.Length;
+              if (length > 0)
               {
+                this._titleLabel.text = Localization.Get("CITY_SERVICE_PANEL_TITLE_STATION_STOPS");
+                this._listBoxPanel.relativePosition = new Vector3(this._listBoxPanel.parent.width + 1f, VerticalOffset);
+                this._listBoxPanel.Show();
                 this._stopsListBox.ClearItems();
                 for (int index = 0; index < length; ++index)
                   this._stopsListBox.AddItem(numArray[index], -1);
               }
+              else
+                this._listBoxPanel.Hide();
+              this._cachedStopCount = length;
             }
-            else
-              this._listBoxPanel.Hide();
-            this._cachedStopCount = length;
             break;
           case ItemClass.SubService.PublicTransportTaxi:
           case ItemClass.SubService.PublicTransportCableCar:
@@ -99,14 +108,17 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
             UIPanel uiPanel = this._cityServiceWorldInfoPanel.Find<UIPanel>("SvsVehicleTypes");
             if ((UnityEngine.Object) uiPanel != (UnityEngine.Object) null)
               this._listBoxPanel.relativePosition = new Vector3((float) ((double) this._listBoxPanel.parent.width + (double) uiPanel.width + 2.0), VerticalOffset);
-            List<ushort> depotVehicles = PanelExtenderCityService.GetDepotVehicles(building);
-            int count = depotVehicles.Count;
-            if (count > 0)
+            VehicleManager vm = Singleton<VehicleManager>.instance;
+            int newCount = 0;
+            for (ushort idx = instance1.m_buildings.m_buffer[(int) building].m_ownVehicles; idx != 0; idx = vm.m_vehicles.m_buffer[(int) idx].m_nextOwnVehicle)
+              newCount++;
+            if (newCount > 0)
             {
               this._titleLabel.text = Localization.Get("CITY_SERVICE_PANEL_TITLE_DEPOT_VEHICLES");
               this._listBoxPanel.Show();
-              if ((int) this._cachedBuildingID != (int) building || this._cachedVehicleCount != count)
+              if ((int) this._cachedBuildingID != (int) building || this._cachedVehicleCount != newCount)
               {
+                List<ushort> depotVehicles = PanelExtenderCityService.GetDepotVehicles(building);
                 this._vehicleListBox.ClearItems();
                 PrefabData[] prefabs = VehiclePrefabs.instance.GetPrefabs(service, subService, level);
                 VehicleManager instance2 = Singleton<VehicleManager>.instance;
@@ -127,7 +139,7 @@ namespace ImprovedPublicTransport.UI.PanelExtenders
             }
             else
               this._listBoxPanel.Hide();
-            this._cachedVehicleCount = count;
+            this._cachedVehicleCount = newCount;
             break;
           default:
             this._listBoxPanel.Hide();

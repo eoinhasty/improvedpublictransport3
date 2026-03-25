@@ -33,21 +33,20 @@ namespace ImprovedPublicTransport.Query
                     while (instanceID != 0)
                     {
                         int nextGridInstance = instance1.m_instances.m_buffer[instanceID].m_nextGridInstance;
+                        ref var citizenInstance = ref instance1.m_instances.m_buffer[instanceID];
                         if (
-                            (instance1.m_instances.m_buffer[instanceID].m_flags &
-                             CitizenInstance.Flags.WaitingTransport) != CitizenInstance.Flags.None &&
-                            Vector3.SqrMagnitude((Vector3)instance1.m_instances.m_buffer[instanceID].m_targetPos -
-                                                 position1) < 4096.0 && instance1.m_instances.m_buffer[instanceID].Info
-                                .m_citizenAI.TransportArriveAtSource(instanceID,
-                                    ref instance1.m_instances.m_buffer[instanceID], position1, position2))
+                            (citizenInstance.m_flags & CitizenInstance.Flags.WaitingTransport) != CitizenInstance.Flags.None &&
+                            citizenInstance.Info != null &&
+                            Vector3.SqrMagnitude((Vector3)citizenInstance.m_targetPos - position1) < 4096.0 &&
+                            citizenInstance.Info.m_citizenAI.TransportArriveAtSource(instanceID, ref citizenInstance, position1, position2))
                         {
-                            var waitCounter = instance1.m_instances.m_buffer[instanceID].m_waitCounter;
+                            var waitCounter = citizenInstance.m_waitCounter;
                             max = Math.Max(waitCounter, max);
                             ++num6;
                         }
 
                         instanceID = (ushort)nextGridInstance;
-                        if (++num7 > 65536)
+                        if (++num7 > instance1.m_instances.m_buffer.Length)
                         {
                             CODebugBase<LogChannel>.Error(LogChannel.Core,
                                 "Invalid list detected!\n" + Environment.StackTrace);

@@ -1,4 +1,4 @@
-# ImprovedPublicTransport 3 — Complete Guide
+# ImprovedPublicTransport 3
 
 **Version 3.0** | Last Updated: March 2026
 
@@ -192,7 +192,7 @@ Set ticket prices **independently for each transport type**:
 
 **Key Features:**
 - **Price Control**: Adjust individual transport fares from 0% (free) to 250% of base cost
-- **Day/Night Support** (After Dark DLC): Set different prices for night hours — great for simulating night-shift premium fares
+- **Day/Night Support** : Set different prices for night hours — great for simulating night-shift premium fares
 - **Smart Policy Integration**:
   - When **Free Public Transport policy** is active in a district, all transport becomes free regardless of your slider settings
   - When **High Ticket Prices policy** is active, fares automatically increase by 25% on top of your slider settings
@@ -235,11 +235,11 @@ When you raise ticket prices, fewer people will use that route. This is realisti
 
 ---
 
-### Day/Night Prices (After Dark DLC)
+### Day/Night Prices
 
 Different fares for day hours vs. night hours:
-- **Day Mode** (5 AM – 8 PM): Standard prices
-- **Night Mode** (8 PM – 5 AM): Can be cheaper or more expensive
+- **Day Mode**: Standard prices
+- **Night Mode**: Can be cheaper or more expensive
 
 This aligns with the game’s built-in day/night cycle and is used to automatically switch pricing when the time transition occurs.
 **RealTime Mod Compatibility:** This feature works seamlessly with RealTime mods. Ticket prices will automatically transition at whatever times RealTime sets for day/night, including dynamic seasonal sunrise/sunset adjustments (if enabled). No additional configuration needed — they work together automatically.
@@ -281,6 +281,7 @@ Complete rebuild of IPT2 for the Race Day update, with many standalone transport
 - 🚍 Added Intercity Buses to the Vehicle Editor
 - 🛠 Fixed Deinit early-return bug that left Harmony patches active across game sessions
 - 🛠 Fixed Flight Tracker window positioning and Escape key handling
+- 🛠 Switched from unsafe IL transpiler override to safe postfix mode with config toggle for BBSP
 - 🛠 Fixed Intercity Bus Control to work on all applicable bus transport hubs except Bus-Train-Tram Hub; the game only supports one intercity setting per hub and train hubs have 'Allow Intercity Trains' by default.
 
 ### IPT2 (BloodyPenguin, 2017–2023)

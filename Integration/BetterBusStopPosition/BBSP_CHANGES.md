@@ -1,6 +1,133 @@
-# BetterBusStopPosition — CalculateSegmentPosition Rewrite
+# BetterBusStopPosition — Integration vs. Standalone Source
 
-## Root Cause: SmootherStep Mismatch
+## Major Architectural Differences
+
+The IPT3 integration of BBSP differs fundamentally from the original standalone mod.
+
+### 1. Patch Type: Transpiler → Postfix
+
+| Aspect | Original BBSP | IPT3 Integration |
+|--------|---------------|-----------------|
+| Patch Type | Transpiler on `BusAI.CalculateSegmentPosition` | Postfix on `BusAI.CalculateSegmentPosition` |
+| Patch Point | Rewrites IL to replace `NetLane.CalculateStopPositionAndDirection` call | Modifies output parameters `pos`, `dir` after vanilla method completes |
+| Method Replaced | `NetLane.CalculateStopPositionAndDirection` call | (none; vanilla call proceeds unchanged) |
+
+**Consequence**: Original prevented vanilla SmootherStep tapering by bypassing the call entirely. IPT runs vanilla code first, then recalculates output — functionally equivalent for IPT integration, but execution differs.
+
+### 2. Logic Modes: Single → Three Configurable Modes
+
+**Original BBSP**: Always applies the offset calculation and calls vanilla method with modified offset.
+
+**IPT3 Integration**: Runtime-selectable modes via `ImprovedPublicTransport.Settings.Settings.BbspLogic`:
+- **Disabled** — Vanilla behavior (new in IPT3)
+- **Enabled** — Fixed BBSP behavior (offset calculation + vanilla method call)
+
+### 3. Vehicle Flags Condition
+
+| Version | Condition |
+|---------|-----------|
+| Original | `(vehicleData.m_flags & Vehicle.Flags.Leaving) == 0` |
+| IPT3 | `(vehicleData.m_flags & (Vehicle.Flags.Leaving \| Vehicle.Flags.Arriving)) == 0` (in postfix gate) |
+| IPT3 BBSPMode | `(vehicleData.m_flags & Vehicle.Flags.Leaving) == 0` (in inner logic) |
+
+**Original** blocks positioning changes only when vehicle has Leaving flag.  
+**IPT3 Postfix Gate** blocks the entire postfix if vehicle is neither Leaving nor Arriving (stricter gate).  
+**IPT3 BBSPMode** replicates original Leaving check inside the mode.
+
+**Consequence**: IPT3 skips all processing if vehicle is not actively boarding/alighting. Original processes if not leaving. This is a **functional difference** for idle vehicles.
+
+### 4. Null Safety
+
+| Version | m_generatedInfo Check |
+|---------|----------------------|
+| Original | None (assumes non-null) |
+| IPT3 | `vehicleData.Info.m_generatedInfo != null ? vehicleData.Info.m_generatedInfo.m_size.z : 0f` |
+
+**Consequence**: IPT3 is safer; original could crash on vehicles with null Info.m_generatedInfo.
+
+### 5. Options Integration
+
+| Aspect | Original | IPT3 |
+|--------|----------|------|
+| Master Enable | Not present | `BbspLogic` option (0=Disabled, 1=BBSPMode, default) |
+| Options Framework | Standalone mod none | Integrated into IPT Options (OptionsWrapper) |
+| UI Configuration | None (always on) | Settable from IPT Options panel |
+
+### 6. TrolleybusAI Support
+
+**Both versions**: Patch `TrolleybusAI.CalculateSegmentPosition` identically.
+
+**Original**: Uses same transpiler as BusAI.  
+**IPT3**: Uses same postfix pattern, calls shared `BusAI_Patch.CalculateModifiedStopPosition`.
+
+---
+
+## Functional Equivalence Assessment
+
+### When IPT3 is in "BBSPMode" mode:
+- ✅ Offset calculation is **identical** to original
+- ✅ Final method call (vanilla `CalculateStopPositionAndDirection`) is **identical**
+- ⚠️ Execution path differs (postfix recalc vs. transpiler bypass), but **result is mathematically equivalent**
+- ✅ TrolleybusAI behavior **identical**
+
+### When IPT3 is in "Disabled" mode:
+- ✅ **Identical to vanilla behavior** (no positioning changes)
+
+### Where they differ:
+1. **Postfix Gate** — IPT3's `(Leaving | Arriving)` check is stricter than original's `!Leaving` check
+   - **Test case**: Idle vehicle at stop → Original would apply offset, IPT3 would skip
+   - **Real-world impact**: Minimal (idle vehicles rarely need stop positioning adjustments)
+
+2. **Null Safety** — IPT3 handles null m_generatedInfo, original assumes non-null
+   - **Test case**: Vehicle with uninitialized Info → Original might crash, IPT3 uses fallback (0.0f)
+
+3. **UpdatedLogic Mode** — Disabled in IPT3 (commented code), would use direct Bezier calculation
+   - **Not yet enabled** pending testing/validation
+
+---
+
+## Recommended Next Steps
+
+1. **Test idle vehicle positioning** — Verify original vs. IPT3 behavior for stationary vehicles at stops
+2. **Enable UpdatedLogic mode** — The Bezier-direct method (commented) may improve smoothing once validated
+3. **Simplify Postfix Gate** — Consider reverting to original `!Leaving` check to match more closely (if idle vehicle testing shows no issue)
+
+---
+
+## Code Summaries
+
+### Original BBSP Logic
+```csharp
+// Transpiler replaces CalculateStopPositionAndDirection call
+// CalculateSegmentPosition_Hook(lane, laneOffset, vehicleID, vehicleData, laneInfo, flags):
+if (vehicle not leaving AND laneLength ≥ 1):
+    margin = laneLength / 6
+    vehicleLength = vehicleData.Info.m_generatedInfo.m_size.z
+    newStopOffset = 1 - (margin + vehicleLength/2) / laneLength
+    if newStopOffset ≥ 0.5:
+        account for lane/segment invert flags
+        laneOffset *= 2 * newStopOffset
+return laneOffset (modified or original)
+// Passed to vanilla CalculateStopPositionAndDirection(laneOffset, stopOffset, ...)
+```
+
+### IPT3 BBSPMode (functionally equivalent)
+```csharp
+// Postfix modifies pos/dir after vanilla method
+if (vehicle not Leaving/Arriving):  // stricter gate!
+    modifiedOffset = laneOffset
+    if (vehicle not leaving AND laneLength ≥ 1):
+        margin = laneLength / 6
+        vehicleLength = vehicleData.Info?.m_generatedInfo?.m_size.z ?? 0f  // null-safe
+        newStopOffset = 1 - (margin + vehicleLength/2) / laneLength
+        if newStopOffset ≥ 0.5:
+            account for lane/segment invert flags
+            modifiedOffset *= 2 * newStopOffset
+    lane.CalculateStopPositionAndDirection(modifiedOffset, stopOffset, out pos, out dir)
+// pos/dir now contain result with modified offset
+```
+
+Root Cause: SmootherStep Mismatch
 
 Vanilla `NetLane.CalculateStopPositionAndDirection` uses a `SmootherStep(0.5, 0, |laneOffset - 0.5|)` curve to apply the lateral curb offset (`stopOffset`). This curve peaks at exactly 1.0 when `laneOffset = 0.5` (the vanilla lane-centre stop) and tapers to 0 at both ends.
 
@@ -52,12 +179,6 @@ dir = bezier.Tangent(targetOffset)
 if stopOffset ≠ 0:
     pos += Cross(up, dir).normalized * stopOffset   // full lateral displacement
 ```
-
-### Key corrections vs. earlier draft
-
-- **`dist` was wrong**: an earlier version computed `|laneOffset - targetOffset|` as a static constant and passed it to SmootherStep — but that static value cannot represent the per-frame approach position that SmootherStep needs. Discarded entirely.
-- **SmootherStep = 1.0 at vanilla offset**: at `laneOffset = 0.5` (vanilla), `SmootherStep(0.5, 0, 0) = 1.0`, so the original full displacement is applied. The new code also applies the full displacement, matching vanilla exactly in the fallback case.
-- **`stopOffset` parameter**: this is the *lane's* lateral curb offset (from `m_stopOffset`), not the Bezier position. It is passed in as an additional argument captured from the existing IL before the replaced call.
 
 ## Files Changed
 

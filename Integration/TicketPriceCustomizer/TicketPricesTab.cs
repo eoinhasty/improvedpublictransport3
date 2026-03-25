@@ -237,9 +237,6 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                 return;
             }
 
-            // Check if After Dark is installed (for day/night sliders)
-            bool hasAfterDark = SteamHelper.IsDLCOwned(SteamHelper.DLC.AfterDarkDLC);
-
             // Load current settings
             var settings = OptionsWrapper<Settings.Settings>.Options;
             if (settings.TicketPriceCustomizer == null)
@@ -313,7 +310,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             foreach (var transportType in landTransport)
             {
                 Utils.Log($"TicketPricesTab: Creating land row for {transportType.Name}");
-                var row = CreateSliderRow(leftColumn, transportType, hasAfterDark, landIndex);
+                var row = CreateSliderRow(leftColumn, transportType, landIndex);
                 if (row != null)
                 {
                     s_sliderRows.Add(row);
@@ -325,7 +322,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             foreach (var transportType in airWaterTransport)
             {
                 Utils.Log($"TicketPricesTab: Creating air/water row for {transportType.Name}");
-                var row = CreateSliderRow(rightColumn, transportType, hasAfterDark, airIndex);
+                var row = CreateSliderRow(rightColumn, transportType, airIndex);
                 if (row != null)
                 {
                     s_sliderRows.Add(row);
@@ -395,21 +392,21 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             }
         }
 
-        private static TicketPriceSliderRow CreateSliderRow(UIScrollablePanel container, TransportTypeInfo transportType, bool hasAfterDark, int index)
+        private static TicketPriceSliderRow CreateSliderRow(UIScrollablePanel container, TransportTypeInfo transportType, int index)
         {
             // Try the game's BudgetItem prefab first — gives the correct dual-handle visual for free.
             // Falls back to a custom row if the template is unavailable.
-            var row = CreateSliderRowFromTemplate(container, transportType, hasAfterDark, index);
+            var row = CreateSliderRowFromTemplate(container, transportType, index);
             if (row != null) return row;
             Utils.Log($"TicketPricesTab: Template unavailable for {transportType.Name}, using fallback");
-            return CreateSliderRowFallback(container, transportType, hasAfterDark, index);
+            return CreateSliderRowFallback(container, transportType, index);
         }
 
         // Uses the game's own BudgetItem prefab — visually identical to the Budget panel.
         // Reflects into BudgetItem for slider/label refs, then destroys the MonoBehaviour so
         // EconomyPanel cannot call Init() and override our range/values.
         private static TicketPriceSliderRow CreateSliderRowFromTemplate(
-            UIScrollablePanel container, TransportTypeInfo transportType, bool hasAfterDark, int index)
+            UIScrollablePanel container, TransportTypeInfo transportType, int index)
         {
             Utils.Log($"TicketPricesTab: GetAsGameObject BudgetItem for {transportType.Name}");
             var templateGO   = UITemplateManager.GetAsGameObject("BudgetItem");
@@ -479,13 +476,8 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             dayLabel.text                = Mathf.RoundToInt(dayPercent).ToString();
             daySlider.tooltip            = GetTransportTooltip(transportType.Name);
 
-            // Night slider
-            if (!hasAfterDark)
-            {
-                if (nightSlider != null) nightSlider.isVisible = false;
-                if (nightLabel  != null) nightLabel.isVisible  = false;
-            }
-            else
+            // Night slider — always configure (day/night cycle is vanilla, not After Dark)
+            if (nightSlider != null)
             {
                 float nightPercent           = GetMultiplier(transportType.Name, true) * 100f;
                 nightSlider.minValue         = 0f;
@@ -493,7 +485,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                 nightSlider.stepSize         = 5f;
                 nightSlider.scrollWheelAmount = 5f;
                 nightSlider.value            = nightPercent;
-                nightLabel.text              = Mathf.RoundToInt(nightPercent).ToString();
+                if (nightLabel != null) nightLabel.text = Mathf.RoundToInt(nightPercent).ToString();
                 nightSlider.tooltip          = GetTransportTooltip(transportType.Name);
             }
 
@@ -512,10 +504,9 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                 TransportType = transportType,
                 DaySlider     = daySlider,
                 DayLabel      = dayLabel,
-                NightSlider   = hasAfterDark ? nightSlider : null,
-                NightLabel    = hasAfterDark ? nightLabel  : null,
+                NightSlider   = nightSlider,
+                NightLabel    = nightLabel,
                 TotalLabel    = totalLabel,
-                HasAfterDark  = hasAfterDark
             };
 
             daySlider.eventValueChanged += (comp, value) =>
@@ -524,7 +515,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                 ApplyMultiplier(row);
             };
 
-            if (hasAfterDark && nightSlider != null)
+            if (nightSlider != null)
             {
                 nightSlider.eventValueChanged += (comp, value) =>
                 {
@@ -540,7 +531,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
         // Custom row layout matching the Budget panel style:
         // [Icon] | [Day slider ────────] 100% | [₡income]
         //        | [Night slider ──────] 100% |
-        private static TicketPriceSliderRow CreateSliderRowFallback(UIScrollablePanel container, TransportTypeInfo transportType, bool hasAfterDark, int index)
+        private static TicketPriceSliderRow CreateSliderRowFallback(UIScrollablePanel container, TransportTypeInfo transportType, int index)
         {
             const float ICON_W   = 26f;
             const float PCT_W    = 38f;   // "250%" label width
@@ -549,7 +540,8 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             const float SLD_H    = 18f;   // height of one slider track (matches BudgetItem)
             const float SLD_GAP  = 3f;    // gap between day and night sliders
 
-            float rowH = hasAfterDark ? (SLD_H * 2f + SLD_GAP + PAD * 2f) : (SLD_H + PAD * 2f);
+            // Always use two-row height — day/night cycle is vanilla, not After Dark
+            float rowH = SLD_H * 2f + SLD_GAP + PAD * 2f;
             rowH = Mathf.Max(rowH, 28f);
 
             var rowPanel = container.AddUIComponent<UIPanel>();
@@ -601,19 +593,14 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             var dayLabel = CreatePercentLabel(rowPanel, pctX, daySliderY, PCT_W);
             dayLabel.text = Mathf.RoundToInt(currentPercent) + "%";
 
-            // ── Night slider (After Dark only) ──────────────────────────
-            UISlider nightSlider = null;
-            UILabel  nightLabel  = null;
-            if (hasAfterDark)
-            {
-                float nightPercent = GetMultiplier(transportType.Name, true) * 100f;
-                nightSlider = CreateTicketSlider(rowPanel, sliderAreaX, nightSliderY, sliderAreaW);
-                nightSlider.value = nightPercent;
-                nightSlider.tooltip = GetTransportTooltip(transportType.Name);
+            // ── Night slider — always shown (day/night cycle is vanilla, not After Dark) ───
+            float nightPercent = GetMultiplier(transportType.Name, true) * 100f;
+            UISlider nightSlider = CreateTicketSlider(rowPanel, sliderAreaX, nightSliderY, sliderAreaW);
+            nightSlider.value = nightPercent;
+            nightSlider.tooltip = GetTransportTooltip(transportType.Name);
 
-                nightLabel = CreatePercentLabel(rowPanel, pctX, nightSliderY, PCT_W);
-                nightLabel.text = Mathf.RoundToInt(nightPercent) + "%";
-            }
+            UILabel nightLabel = CreatePercentLabel(rowPanel, pctX, nightSliderY, PCT_W);
+            nightLabel.text = Mathf.RoundToInt(nightPercent) + "%";
 
             // ── Income total box ────────────────────────────────────────
             float totalX = rowPanel.width - TOTAL_W - PAD;
@@ -652,7 +639,6 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
                 NightSlider   = nightSlider,
                 NightLabel    = nightLabel,
                 TotalLabel    = totalLabel,
-                HasAfterDark  = hasAfterDark
             };
 
             daySlider.eventValueChanged += (comp, value) =>
@@ -727,7 +713,7 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             try
             {
                 float dayMultiplier   = row.DaySlider.value / 100f;
-                float nightMultiplier = (row.HasAfterDark && row.NightSlider != null)
+                float nightMultiplier = row.NightSlider != null
                     ? row.NightSlider.value / 100f
                     : dayMultiplier;
 
@@ -1208,7 +1194,6 @@ namespace ImprovedPublicTransport.Integration.TicketPriceCustomizer
             public UISlider NightSlider;
             public UILabel NightLabel;
             public UILabel TotalLabel;
-            public bool HasAfterDark;
         }
 
         #endregion
